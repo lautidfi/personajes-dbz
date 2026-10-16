@@ -8,6 +8,8 @@ export function createCharacterModal(main) {
 	let activeCard = null;
 	let activePlaceholder = null;
 	let previousFocus = null;
+	let previousScrollX = 0;
+	let previousScrollY = 0;
 	let previousBodyOverflow = "";
 	let previousBodyPaddingRight = "";
 	let closeTimer = null;
@@ -79,6 +81,8 @@ export function createCharacterModal(main) {
 		addModalDetails(card, character);
 		activeCard = card;
 		previousFocus = document.activeElement;
+		previousScrollX = window.scrollX;
+		previousScrollY = window.scrollY;
 		previousBodyOverflow = document.body.style.overflow;
 		previousBodyPaddingRight = document.body.style.paddingRight;
 		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -128,7 +132,6 @@ export function createCharacterModal(main) {
 		card.classList.remove("is-expanded");
 		setCardRect(card, targetRect);
 		backdrop.classList.remove("is-visible");
-		if (previousFocus instanceof HTMLElement) previousFocus.focus();
 
 		const finishClosing = () => {
 			if (activeCard !== card) return;
@@ -148,6 +151,10 @@ export function createCharacterModal(main) {
 			document.body.style.overflow = previousBodyOverflow;
 			document.body.style.paddingRight = previousBodyPaddingRight;
 			backdrop.hidden = true;
+			if (previousFocus instanceof HTMLElement) {
+				previousFocus.focus({ preventScroll: true });
+			}
+			window.scrollTo(previousScrollX, previousScrollY);
 		};
 		const onTransitionEnd = (event) => {
 			if (event.target !== card || !["top", "left", "width", "height"].includes(event.propertyName)) return;
