@@ -1,4 +1,4 @@
-export function createCharacterModal(main) {
+export function createCharacterModal(main, getCharacterDetails) {
 	const backdrop = document.createElement("div");
 	backdrop.className = "card-backdrop";
 	backdrop.hidden = true;
@@ -12,6 +12,8 @@ export function createCharacterModal(main) {
 	let previousScrollY = 0;
 	let previousBodyOverflow = "";
 	let previousBodyPaddingRight = "";
+	let baseImage = "";
+	let baseImageAlt = "";
 	let closeTimer = null;
 
 	function getExpandedCardRect() {
@@ -52,10 +54,19 @@ export function createCharacterModal(main) {
 		stats.append(ki, maxKi);
 		header.append(stats);
 
+		const infoPanel = document.createElement("div");
+		infoPanel.className = "character-info-panel";
 		const description = document.createElement("p");
 		description.className = "character-description";
 		description.textContent = character.description || "Sin descripción disponible.";
-		details.append(description);
+		infoPanel.append(description);
+
+		const transformations = document.createElement("section");
+		transformations.className = "character-transformations";
+		transformations.hidden = true;
+		transformations.setAttribute("aria-label", "Transformaciones");
+		infoPanel.append(transformations);
+		details.append(infoPanel);
 
 		const closeButton = document.createElement("button");
 		closeButton.className = "card-close-button";
@@ -67,19 +78,120 @@ export function createCharacterModal(main) {
 			closeCard();
 		});
 		card.append(closeButton);
+		return { ki, maxKi, description, transformations };
 	}
 
 	function removeModalDetails(card) {
 		card.querySelector(".character-stats")?.remove();
-		card.querySelector(".character-description")?.remove();
+		card.querySelector(".character-info-panel")?.remove();
 		card.querySelector(".card-close-button")?.remove();
+	}
+
+	function setCharacterImage(image, src, alt) {
+		image.classList.remove("is-changing");
+		void image.offsetWidth;
+		image.src = src;
+		image.alt = alt;
+		image.classList.add("is-changing");
+	}
+
+	function preloadImage(src) {
+		return new Promise((resolve) => {
+			const preload = new Image();
+			let settled = false;
+			const finish = async (loaded) => {
+				if (settled) return;
+				settled = true;
+				if (loaded && typeof preload.decode === "function") {
+					try {
+						await preload.decode();
+					} catch {
+						// The load event is sufficient when decode is unsupported or fails.
+					}
+				}
+				resolve(loaded);
+			};
+			preload.addEventListener("load", () => finish(true), { once: true });
+			preload.addEventListener("error", () => finish(false), { once: true });
+			preload.src = src;
+			if (preload.complete) void finish(preload.naturalWidth > 0);
+		});
+	}
+
+	function renderTransformations(card, character, transformations) {
+		const section = card.querySelector(".character-transformations");
+		section.replaceChildren();
+		if (!Array.isArray(transformations) || transformations.length === 0) {
+			section.hidden = true;
+			return;
+		}
+
+		section.hidden = false;
+		const heading = document.createElement("h3");
+		heading.textContent = "Transformaciones";
+		const buttons = document.createElement("div");
+		buttons.className = "transformation-buttons";
+		const image = card.querySelector(".character-image");
+		let latestSelection = 0;
+		const options = [
+			{ name: "Forma base", image: baseImage, alt: baseImageAlt },
+			...transformations.filter((transformation) => transformation.image).map((transformation) => ({
+				name: transformation.name || "Transformación",
+				image: transformation.image,
+				alt: `${character.name || "Personaje"} - ${transformation.name || "Transformación"}`,
+			})),
+		];
+
+		options.forEach((option, index) => {
+			const button = document.createElement("button");
+			button.className = "transformation-button";
+			button.type = "button";
+			button.textContent = option.name;
+			button.setAttribute("aria-pressed", String(index === 0));
+			button.addEventListener("click", async () => {
+				if (activeCard !== card || card.classList.contains("is-closing")) return;
+				const selection = ++latestSelection;
+				const loaded = await preloadImage(option.image);
+				if (!loaded || selection !== latestSelection || activeCard !== card || card.classList.contains("is-closing")) return;
+				buttons.querySelector('[aria-pressed="true"]')?.setAttribute("aria-pressed", "false");
+				button.setAttribute("aria-pressed", "true");
+				setCharacterImage(image, option.image, option.alt);
+			});
+			buttons.append(button);
+		});
+		section.append(heading, buttons);
+	}
+
+	async function loadCharacterDetails(card, character, details) {
+		try {
+			const fullCharacter = await getCharacterDetails(character.id);
+			if (!fullCharacter || activeCard !== card) return;
+
+			details.ki.textContent = `Ki: ${fullCharacter.ki ?? character.ki ?? "Desconocido"}`;
+			details.maxKi.textContent = `Max Ki: ${fullCharacter.maxKi ?? character.maxKi ?? "Desconocido"}`;
+			details.description.textContent = fullCharacter.description || character.description || "Sin descripción disponible.";
+			const image = card.querySelector(".character-image");
+			baseImage = fullCharacter.image || character.image || baseImage;
+			baseImageAlt = character.name ? `Imagen de ${character.name}` : "Imagen del personaje";
+			if (!card.querySelector('.transformation-button[aria-pressed="true"]') ||
+				card.querySelector('.transformation-button[aria-pressed="true"]')?.textContent === "Forma base") {
+				image.src = baseImage;
+				image.alt = baseImageAlt;
+			}
+			renderTransformations(card, character, fullCharacter.transformations);
+		} catch (error) {
+			console.error("Unable to load character details:", error);
+		}
 	}
 
 	function openCard(card, character) {
 		if (activeCard) return;
 		const originalRect = card.getBoundingClientRect();
-		addModalDetails(card, character);
+		const details = addModalDetails(card, character);
 		activeCard = card;
+		const image = card.querySelector(".character-image");
+		baseImage = image.src;
+		baseImageAlt = image.alt;
 		previousFocus = document.activeElement;
 		previousScrollX = window.scrollX;
 		previousScrollY = window.scrollY;
@@ -119,11 +231,16 @@ export function createCharacterModal(main) {
 			setCardRect(card, getExpandedCardRect());
 			card.querySelector(".card-close-button").focus();
 		});
+		void loadCharacterDetails(card, character, details);
 	}
 
 	function closeCard() {
 		if (!activeCard || activeCard.classList.contains("is-closing")) return;
 		const card = activeCard;
+		const image = card.querySelector(".character-image");
+		image.src = baseImage;
+		image.alt = baseImageAlt;
+		image.classList.remove("is-changing");
 		const targetRect = activePlaceholder.getBoundingClientRect();
 		const currentRect = card.getBoundingClientRect();
 		setCardRect(card, currentRect);

@@ -139,6 +139,10 @@ body {
 	border-radius: 6px;
 }
 
+.character-image.is-changing {
+	animation: transformation-change 360ms ease-out;
+}
+
 .card-placeholder {
 	min-width: 0;
 	box-sizing: border-box;
@@ -245,28 +249,97 @@ body {
 	white-space: pre-line;
 }
 
-.character-card.is-expanded .character-description {
+.character-card.is-expanded .character-description,
+.character-card.is-expanded .character-transformations {
 	scrollbar-color: #f0a900 rgba(16, 24, 36, 0.72);
 	scrollbar-width: thin;
 }
 
-.character-card.is-expanded .character-description::-webkit-scrollbar {
+.character-card.is-expanded .character-description::-webkit-scrollbar,
+.character-card.is-expanded .character-transformations::-webkit-scrollbar {
 	width: 9px;
 }
 
-.character-card.is-expanded .character-description::-webkit-scrollbar-track {
+.character-card.is-expanded .character-description::-webkit-scrollbar-track,
+.character-card.is-expanded .character-transformations::-webkit-scrollbar-track {
 	background: rgba(16, 24, 36, 0.72);
 	border-radius: 8px;
 }
 
-.character-card.is-expanded .character-description::-webkit-scrollbar-thumb {
+.character-card.is-expanded .character-description::-webkit-scrollbar-thumb,
+.character-card.is-expanded .character-transformations::-webkit-scrollbar-thumb {
 	background: #f0a900;
 	border: 2px solid rgba(16, 24, 36, 0.72);
 	border-radius: 8px;
 }
 
-.character-card.is-expanded .character-description::-webkit-scrollbar-thumb:hover {
+.character-card.is-expanded .character-description::-webkit-scrollbar-thumb:hover,
+.character-card.is-expanded .character-transformations::-webkit-scrollbar-thumb:hover {
 	background: #ffe299;
+}
+
+.character-card.is-expanded .character-info-panel {
+	display: flex;
+	flex: 1 1 0;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+	min-height: 0;
+}
+
+.character-card.is-expanded .character-info-panel .character-description {
+	flex: 1 1 0;
+}
+
+.character-card.is-expanded .character-transformations {
+	flex: 1 1 0;
+	min-height: 0;
+	padding: 12px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 226, 153, 0.72);
+	border-radius: 10px;
+	overflow: auto;
+}
+
+.character-card.is-expanded .character-transformations[hidden] {
+	display: none;
+}
+
+.character-transformations h3 {
+	margin: 0 0 9px;
+	font-family: "Exo", sans-serif;
+	font-size: 0.95rem;
+}
+
+.transformation-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.transformation-button {
+	padding: 7px 11px;
+	color: #fff2c2;
+	background: rgba(16, 24, 36, 0.9);
+	border: 1px solid rgba(255, 226, 153, 0.72);
+	border-radius: 999px;
+	font: 600 0.82rem "Exo", sans-serif;
+	cursor: pointer;
+	transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.transformation-button:hover,
+.transformation-button:focus-visible {
+	color: #201307;
+	background: #ffe299;
+	border-color: #ffe299;
+	outline: none;
+}
+
+.transformation-button[aria-pressed="true"] {
+	color: #201307;
+	background: #f0a900;
+	border-color: #ffe299;
 }
 
 .character-card.is-expanded .card-close-button {
@@ -329,6 +402,17 @@ body {
 	}
 }
 
+@keyframes transformation-change {
+	0% {
+		opacity: 0.35;
+	transform: scale(0.96);
+	}
+	100% {
+		opacity: 1;
+	transform: scale(1);
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.character-card {
 		animation-duration: 1ms;
@@ -338,6 +422,10 @@ body {
 
 	.card-backdrop {
 		transition-duration: 1ms;
+	}
+
+	.character-image.is-changing {
+		animation-duration: 1ms;
 	}
 }
 

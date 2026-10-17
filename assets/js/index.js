@@ -3,8 +3,8 @@ import { createCharacterModal } from "./modal.js";
 import { createCharacterLoader } from "./characters-api.js";
 
 const main = document.querySelector(".main-container");
-const modal = createCharacterModal(main);
 const characterLoader = createCharacterLoader();
+const modal = createCharacterModal(main, characterLoader.getCharacterDetails);
 
 initializeCards({
 	grid: document.querySelector(".cards-grid"),
